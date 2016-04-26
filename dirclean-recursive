@@ -1,0 +1,79 @@
+#!/bin/bash
+
+#Usage: dirclean [--test] ROOT_DIRECTORY FILENAME_PATTERN...
+
+#Matches FILENAME_PATTERN against files in ROOT_DIRECTORY and deletes them.
+#Multiple filename patters can be given. This is a recursive version. It does
+#go into subdirectories.
+
+#If --test option is used, dirclean will find the files matching the pattern and
+#print them out for review. Nothing will be deleted.
+
+#Author: Jessica Van Meter, jessica.vanmeter@siu.edu
+
+#1 basic error checking for correct number of arguments in the call:
+if [[ $# -lt 2 ]]; then
+	echo "Usage: dirclean [--test] ROOT_DIRECTORY FILENAME_PATTERN..."
+	exit 1
+fi
+
+#2 deterimine if --test was used in call, get root directory and patterns list:
+#check for test:
+cmd=$(which $0)
+#echo "Command: ""$cmd"
+if [[ "$1" == --test ]]; then
+	testing=true
+	shift
+	echo "\"--test\" was chosen. Nothing will be removed."				
+else 
+	testing=false
+fi
+#get root directory (above use of shift means it is now the first argument):
+rootdir="$1"
+#echo $rootdir
+absrootdir=$(cd "$rootdir"; pwd)
+#echo $absrootdir
+#get list of patterns:
+shift #ensures remaining args should be patterns, allowing use of mapping
+
+#3 checking that the passed directory exists and is a directory:
+if [[ ! -d "$absrootdir" ]]; then
+	echo "ROOT_DIRECTORY argument is not a valid directory: $rootdir"
+	exit 1
+else
+	cd "$absrootdir"
+fi
+
+#4 loop through the entries in the directory:
+for file in * .*; do
+	#4.a if entry is a regular file, determine if it matches one of 
+		#the supplied filename patterns
+	for pattern in "$@"; do
+		if [[ "$file" == $pattern && "$file" != . && "$file" != .. ]]; then
+			if $testing; then
+				echo "Matched:""$file"
+			else 
+				if rm --force "$file" &> /dev/null; then
+					echo "Deleted:""$file"
+				else
+					echo "Deletion failed:""$file"
+				fi
+				
+			fi
+			break
+		fi
+	done
+done
+
+for dir in * .*; do
+	if [[ -d "$dir" ]]; then
+		if $testing; then
+			"$cmd" "--test" "$dir" "$@"
+		else
+			"$cmd" "$dir" "$@"
+		fi
+	fi
+done
+	
+#5 successful completion of the script should result in a return value of 0:
+exit 0
